@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Event Announcements</title>
+  <link rel="stylesheet" href="styles.css" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#f8fafc; color:#0f172a; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    header, footer { background:#ffffff; border:1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    h1 { margin: 0 0 8px; }
+    #events-container, #create-event-form { background:#ffffff; border:1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    button { cursor: pointer; border: 1px solid #e2e8f0; background:#0ea5e9; color:#fff; padding:10px 14px; border-radius:10px; font-weight:600; }
+    button.secondary { background:#64748b; }
+    label { display: block; margin-top: 10px; font-weight: 600; }
+    input, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 4px; }
+    ul { padding-left: 18px; }
+    li { margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Event Announcements</h1>
+      <p>Stay tuned for the latest events and announcements!</p>
+      <button id="subscribeBtn" type="button">Subscribe to Events</button>
+    </header>
+
+    <section id="events-container">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px;">
+        <h2 style="margin:0;">Latest Events</h2>
+        <button id="showCreateBtn" class="secondary" type="button" onclick="showCreateEventForm(true)">Create New Event</button>
+      </div>
+      <ul id="events-list"></ul>
+    </section>
+
+    <section id="create-event-form" style="display:none;">
+      <h3>Create New Event</h3>
+      <form id="createEventForm">
+        <label for="event-title">Title</label>
+        <input type="text" id="event-title" required />
+        <label for="event-date">Date</label>
+        <input type="date" id="event-date" required />
+        <label for="event-description">Description</label>
+        <textarea id="event-description" rows="4" required></textarea>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button type="submit">Submit</button>
+          <button type="button" class="secondary" id="cancelCreateBtn" onclick="showCreateEventForm(false)">Cancel</button>
+        </div>
+      </form>
+    </section>
+
+    <footer>
+      <p>Subscribe to get notified about new events!</p>
+    </footer>
+
+    <script>
+      // =============================
+      // API ENDPOINTS (your real URLs)
+      // =============================
+      const SUBSCRIBE_API = "https://so28oiboq4.execute-api.us-east-1.amazonaws.com/dev/subscribe"; // already working
+      const CREATE_EVENT_API = "https://so28oiboq4.execute-api.us-east-1.amazonaws.com/dev/create-event";
+
+      // If your events.json is in the same bucket root, leave as-is
+      const EVENTS_JSON_URL = "events.json";
+
+      function extractMessageFromEnvelope(rawText) {
+        try {
+          const outer = JSON.parse(rawText);
+          if (outer && typeof outer === 'object') {
+            if (typeof outer.message === 'string') return outer.message;
+            if (typeof outer.body === 'string') {
+              try {
+                const inner = JSON.parse(outer.body);
+                if (inner && typeof inner.message === 'string') return inner.message;
+              } catch (e) {}
+            }
+          }
+        } catch (e) {}
+        return null;
+      }
+
+      async function loadEvents() {
+        try {
+          const response = await fetch(`${EVENTS_JSON_URL}?t=${Date.now()}`);
+          if (!response.ok) throw new Error(`Failed to fetch events.json: ${response.status}`);
+          const events = await response.json();
+          displayEvents(Array.isArray(events) ? events : []);
+        } catch (err) {
+          console.error("Error fetching events:", err);
+          displayEvents([]);
+        }
+      }
+
+      function displayEvents(events) {
+        const ul = document.getElementById('events-list');
+        ul.innerHTML = '';
+        if (!events.length) {
+          const li = document.createElement('li');
+          li.textContent = 'No events yet. Be the first to create one!';
+          ul.appendChild(li);
+          return;
+        }
+        events.forEach(evt => {
+          const li = document.createElement('li');
+          const title = (evt && evt.title) ? String(evt.title) : 'Untitled';
+          const date = (evt && evt.date) ? String(evt.date) : '';
+          const desc = (evt && evt.description) ? String(evt.description) : '';
+          li.innerHTML = `<strong>${title}</strong>${date ? ' – ' + date : ''}<br>${desc}`;
+          ul.appendChild(li);
+        });
+      }
+
+      function showCreateEventForm(show = true) {
+        const sec = document.getElementById('create-event-form');
+        sec.style.display = show ? 'block' : 'none';
+        if (show) {
+          sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const t = document.getElementById('event-title');
+          if (t) t.focus();
+        }
+      }
+
+      async function subscribeToEvents() {
+        const email = prompt("Enter your email to subscribe to event notifications:");
+        if (!email) { alert("Email is required for subscription."); return; }
+
+        try {
+          const res = await fetch(SUBSCRIBE_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+
+          const raw = await res.text();
+          console.log('Raw subscribe response:', raw);
+
+          const msg = extractMessageFromEnvelope(raw) || (res.ok ? 'Subscription request sent. Please check your email to confirm.' : null);
+          if (res.ok) {
+            alert(msg);
+          } else {
+            alert('Subscription failed. Please try again.');
+            console.error('Subscribe error:', raw);
+          }
+        } catch (err) {
+          alert('Error subscribing to events. Please try again later.');
+          console.error('Subscribe exception:', err);
+        }
+      }
+
+      async function submitNewEvent(ev) {
+        ev.preventDefault();
+
+        const title = document.getElementById('event-title').value.trim();
+        const date = document.getElementById('event-date').value;
+        const description = document.getElementById('event-description').value.trim();
+
+        if (!title || !date || !description) {
+          alert('Please fill in all fields.');
+          return;
+        }
+
+        const newEvent = { title, date, description };
+
+        try {
+          const res = await fetch(CREATE_EVENT_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newEvent)
+          });
+          const raw = await res.text();
+          console.log('Create event response:', raw);
+
+          if (res.ok) {
+            alert('New event created successfully!');
+            document.getElementById('createEventForm').reset();
+            showCreateEventForm(false);
+            await loadEvents();
+          } else {
+            alert('Failed to create new event.');
+            console.error('Create event error:', raw);
+          }
+        } catch (err) {
+          alert('Error creating new event. Please try again.');
+          console.error('Create event exception:', err);
+        }
+      }
+
+      // Wire up UI events after DOM is ready
+      window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('subscribeBtn').addEventListener('click', subscribeToEvents);
+        document.getElementById('showCreateBtn').addEventListener('click', () => showCreateEventForm(true));
+        document.getElementById('cancelCreateBtn').addEventListener('click', () => showCreateEventForm(false));
+        document.getElementById('createEventForm').addEventListener('submit', submitNewEvent);
+        loadEvents();
+      });
+    </script>
+  </div>
+</body>
+</html>
