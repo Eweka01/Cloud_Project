@@ -267,6 +267,9 @@ fetch('<YOUR_CREATE_EVENT_API_ENDPOINT>', {...})
 4. Delete SNS topic.
 5. Remove IAM roles.
 
+check out my medium for full detailed walk through 
+https://medium.com/@oseweka1/cloud-powered-event-alerts-building-a-serverless-event-announcement-platform-with-aws-s3-lambda-3d23b230fc14
+
 ---
 
 **⏱ Estimated Time:** 2-3 hours  
