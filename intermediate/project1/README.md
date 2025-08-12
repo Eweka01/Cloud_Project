@@ -34,7 +34,7 @@ Set up an API Gateway to handle backend processing for:
 
 ### 1️⃣ Create the Website Frontend Files
 Download pre-built files (`index.html`, `styles.css`, `events.json`) from:  
-https://github.com/Eweka01/Cloud-Engineering-Project/new/main/intermediate/project1
+https://github.com/Eweka01/Cloud-Engineering-Project/tree/main/intermediate/project1
 
 **If not using Git:**
 - Download ZIP from GitHub.
